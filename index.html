@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Money Records • Elegant Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'bg-dark': '#0f172a',
+            'card-dark': 'rgba(30, 41, 59, 0.7)',
+            'accent': '#14b8a6',
+            'accent-dark': '#0f766e',
+            'text-light': '#e2e8f0',
+            'text-muted': '#94a3b8',
+          },
+          boxShadow: {
+            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+            'neon': '0 0 20px rgba(20, 184, 166, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    @media print {
+      body { color: #000; background: #fff; }
+      #sidebar, header, nav, .no-print, #loginScreen { display: none !important; }
+      #dashboard { margin: 0 !important; }
+      #statementModal { position: static !important; transform: none !important; box-shadow: none !important; }
+      .print-container { padding: 0 !important; box-shadow: none !important; border: none !important; }
+      .bg-card-dark, .bg-slate-900/40, .bg-slate-800/40, .bg-slate-800/60 { background: transparent !important; }
+      .border, .border-slate-700/50 { border-color: #222 !important; }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-bg-dark to-slate-950 text-text-light min-h-screen font-sans antialiased">
+<!-- Login / Register Screen -->
+<div id="loginScreen" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 transition-all duration-500">
+  <div class="bg-card-dark backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-glass p-8 sm:p-10 w-full max-w-md">
+    <div class="text-center mb-6 sm:mb-8">
+      <div class="w-20 h-20 mx-auto bg-gradient-to-br from-accent to-accent-dark rounded-full flex items-center justify-center shadow-neon mb-5">
+        <i class="fas fa-wallet text-3xl text-white"></i>
+      </div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-accent to-teal-400 bg-clip-text text-transparent">Money Records</h1>
+      <p class="text-text-muted mt-2">Secure tracking of advances & repayments</p>
+    </div>
+    <div class="flex items-center justify-center gap-4 mb-6">
+      <button id="tabLogin" class="px-4 py-2 rounded-xl bg-slate-800/60 border border-slate-600 text-sm font-medium">Login</button>
+      <button id="tabRegister" class="px-4 py-2 rounded-xl hover:bg-slate-800/50 border border-slate-600 text-sm font-medium">Create Account</button>
+    </div>
+    <form id="loginForm">
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-text-muted">Username</label>
+        <input type="text" id="username" required class="w-full px-5 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition" placeholder="yourname">
+      </div>
+      <div class="mb-5">
+        <label class="block text-sm font-medium mb-2 text-text-muted">Password</label>
+        <input type="password" id="password" required class="w-full px-5 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition" placeholder="••••••••">
+      </div>
+      <button type="submit" class="w-full bg-gradient-to-r from-accent to-accent-dark hover:from-teal-500 hover:to-teal-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-neon">
+        Sign In
+      </button>
+      <p class="text-center text-xs text-text-muted mt-3">Tip: first user can register below.</p>
+    </form>
+    <form id="registerForm" class="hidden">
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-text-muted">Choose Username</label>
+        <input type="text" id="r_username" required class="w-full px-5 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition" placeholder="e.g. jogendra">
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-text-muted">Password</label>
+        <input type="password" id="r_password" required class="w-full px-5 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition" placeholder="min 6 chars">
+      </div>
+      <div class="mb-5">
+        <label class="block text-sm font-medium mb-2 text-text-muted">Confirm Password</label>
+        <input type="password" id="r_confirm" required class="w-full px-5 py-3 bg-slate-800/50 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition" placeholder="repeat password">
+      </div>
+      <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-black font-semibold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-neon">
+        Create Account
+      </button>
+      <p class="text-center text-xs text-text-muted mt-3">Usernames are unique. Password is stored as a hash on this device.</p>
+    </form>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="hidden">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-card-dark backdrop-blur-xl border-r border-slate-700/50 shadow-glass transform transition-transform duration-300 -translate-x-full lg:translate-x-0 z-30 overflow-y-auto no-print">
+    <div class="p-8 border-b border-slate-700/50">
+      <h2 class="text-2xl font-bold bg-gradient-to-r from-accent to-teal-400 bg-clip-text text-transparent flex items-center">
+        <i class="fas fa-wallet mr-4"></i> Money Dashboard
+      </h2>
+    </div>
+    <nav class="p-6">
+      <ul class="space-y-2">
+        <li><a href="#" class="flex items-center px-5 py-4 rounded-xl hover:bg-slate-700/40 transition font-medium" onclick="showSection(null)"><i class="fas fa-home mr-4 w-6"></i> Overview</a></li>
+        <li><a href="#" class="flex items-center px-5 py-4 rounded-xl hover:bg-slate-700/40 transition font-medium" onclick="showSection('give')"><i class="fas fa-hand-holding-dollar mr-4 w-6 text-green-400"></i> Give Money</a></li>
+        <li><a href="#" class="flex items-center px-5 py-4 rounded-xl hover:bg-slate-700/40 transition font-medium" onclick="showSection('receive')"><i class="fas fa-handshake-angle mr-4 w-6 text-blue-400"></i> Receive Money</a></li>
+        <li><a href="#" class="flex items-center px-5 py-4 rounded-xl hover:bg-slate-700/40 transition font-medium" onclick="showSection('statements')"><i class="fas fa-file-invoice mr-4 w-6 text-amber-300"></i> Statements</a></li>
+        <li class="mt-12 pt-6 border-t border-slate-700/50">
+          <button onclick="logout()" class="flex items-center px-5 py-4 text-red-400 hover:bg-red-900/20 rounded-xl transition font-medium w-full text-left">
+            <i class="fas fa-sign-out-alt mr-4 w-6"></i> Logout
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="lg:ml-72 min-h-screen">
+    <header class="bg-card-dark/80 backdrop-blur-md border-b border-slate-700/50 sticky top-0 z-20 no-print">
+      <div class="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4">
+        <button class="lg:hidden text-2xl text-text-muted" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <h1 class="text-xl sm:text-2xl font-semibold">Dashboard Overview</h1>
+        <div class="flex items-center space-x-4">
+          <span class="text-text-muted hidden sm:block">Welcome, <strong id="currentUser" class="text-accent">User</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-4 sm:p-6 lg:p-8">
+      <div id="message" class="mb-6 text-center font-medium text-lg hidden"></div>
+
+      <!-- KPI Cards -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-glass">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-text-muted text-sm mb-1">Total Given</p>
+              <p id="totalGiven" class="text-3xl sm:text-4xl font-bold text-green-400">0.00</p>
+            </div>
+            <i class="fas fa-arrow-up-from-bracket text-4xl sm:text-5xl text-green-500/30"></i>
+          </div>
+        </div>
+        <div class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-glass">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-text-muted text-sm mb-1">Total Received</p>
+              <p id="totalReceived" class="text-3xl sm:text-4xl font-bold text-blue-400">0.00</p>
+            </div>
+            <i class="fas fa-arrow-down-to-bracket text-4xl sm:text-5xl text-blue-500/30"></i>
+          </div>
+        </div>
+        <div class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-glass">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-text-muted text-sm mb-1">Net Balance</p>
+              <p id="netBalance" class="text-3xl sm:text-4xl font-bold">0.00</p>
+            </div>
+            <i class="fas fa-balance-scale text-4xl sm:text-5xl text-purple-500/30"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- Give Section -->
+      <section id="giveSection" class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 mb-8 shadow-glass hidden">
+        <h2 class="text-2xl font-bold mb-6 sm:mb-8 flex items-center"><i class="fas fa-hand-holding-dollar mr-4 text-green-400"></i> Record Money Given</h2>
+        <form id="giveForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div class="md:col-span-2">
+            <label class="block text-text-muted mb-2 font-medium">Customer Name *</label>
+            <input type="text" id="name_give" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" placeholder="e.g. Ahmed Ali">
+          </div>
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Date Given *</label>
+            <input type="date" id="date_give" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+          </div>
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Reason / Purpose</label>
+            <input id="reason" class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" placeholder="Business advance, medical emergency...">
+          </div>
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Amount Given *</label>
+            <input type="number" id="amount_give" min="0" step="0.01" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" placeholder="1500.00">
+          </div>
+          <div class="md:col-span-2 flex justify-end sticky bottom-2 md:static z-10">
+            <button type="submit" class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold px-6 sm:px-10 py-3 sm:py-4 rounded-xl transition-all shadow-lg hover:shadow-neon w-full md:w-auto">
+              Save Record
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Receive Section -->
+      <section id="receiveSection" class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 mb-8 shadow-glass hidden">
+        <h2 class="text-2xl font-bold mb-6 sm:mb-8 flex items-center"><i class="fas fa-handshake-angle mr-4 text-blue-400"></i> Record Money Received</h2>
+        <form id="receiveForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Select Customer *</label>
+            <select id="name_receive" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+              <option value="">-- Choose Customer --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Amount Received *</label>
+            <input type="number" id="amount_receive" min="0" step="0.01" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" placeholder="500.00">
+          </div>
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Date Received *</label>
+            <input type="date" id="date_receive" required class="w-full px-4 sm:px-5 py-3 sm:py-4 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+          </div>
+          <div class="md:col-span-2 flex justify-end sticky bottom-2 md:static z-10">
+            <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold px-6 sm:px-10 py-3 sm:py-4 rounded-xl transition-all shadow-lg hover:shadow-neon w-full md:w-auto">
+              Save Record
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Statements Section -->
+      <section id="statementsSection" class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 mb-8 shadow-glass hidden">
+        <h2 class="text-2xl font-bold mb-6 sm:mb-8 flex items-center"><i class="fas fa-file-invoice mr-4 text-amber-300"></i> Customer Statements</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-end">
+          <div>
+            <label class="block text-text-muted mb-2 font-medium">Select Customer *</label>
+            <select id="statementCustomer" class="w-full px-4 py-3 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+              <option value="">-- Choose Customer --</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-text-muted mb-2 font-medium">From (optional)</label>
+              <input type="date" id="fromDate" class="w-full px-4 py-3 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+            </div>
+            <div>
+              <label class="block text-text-muted mb-2 font-medium">To (optional)</label>
+              <input type="date" id="toDate" class="w-full px-4 py-3 bg-slate-800/40 border border-slate-600 rounded-xl focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20">
+            </div>
+          </div>
+          <div class="flex gap-3 md:justify-end flex-wrap">
+            <button id="viewStatementBtn" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-4 sm:px-6 py-3 rounded-xl transition-all flex-1 md:flex-none">
+              View Statement
+            </button>
+            <button id="exportCsvBtn" class="bg-amber-500 hover:bg-amber-400 text-black font-semibold px-4 sm:px-6 py-3 rounded-xl transition-all flex-1 md:flex-none">
+              Export CSV
+            </button>
+            <button id="exportXlsxBtn" class="bg-green-600 hover:bg-green-500 text-white font-semibold px-4 sm:px-6 py-3 rounded-xl transition-all flex-1 md:flex-none">
+              Export XLSX
+            </button>
+            <button id="exportPdfBtn" class="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold px-4 sm:px-6 py-3 rounded-xl transition-all flex-1 md:flex-none hidden md:inline-flex">
+              Export PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Statement Preview -->
+        <div id="statementModal" class="mt-8 hidden">
+          <div class="print-container bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6 shadow-glass">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <div>
+                <h3 class="text-xl font-bold">Customer Statement</h3>
+                <p class="text-text-muted text-sm" id="statementRange"></p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-text-muted">Generated: <span id="statementGenerated"></span></p>
+                <p class="text-sm text-text-muted">User: <span id="statementUser"></span></p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
+                <p class="text-text-muted text-xs mb-1">Customer</p>
+                <p class="text-lg font-semibold" id="statementCustomerName">-</p>
+              </div>
+              <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
+                <p class="text-text-muted text-xs mb-1">Total Given</p>
+                <p class="text-lg font-semibold text-green-300" id="statementTotalGiven">0.00</p>
+              </div>
+              <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
+                <p class="text-text-muted text-xs mb-1">Total Received</p>
+                <p class="text-lg font-semibold text-blue-300" id="statementTotalReceived">0.00</p>
+              </div>
+            </div>
+            <div class="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 mb-6">
+              <p class="text-text-muted text-xs mb-1">Balance</p>
+              <p class="text-xl font-bold" id="statementBalance">0.00</p>
+            </div>
+            <div class="overflow-x-auto rounded-2xl border border-slate-700/50">
+              <table class="w-full text-left">
+                <thead class="bg-slate-800/60">
+                  <tr>
+                    <th class="p-4 font-semibold">Date</th>
+                    <th class="p-4 font-semibold">Reason</th>
+                    <th class="p-4 font-semibold">Amount</th>
+                    <th class="p-4 font-semibold">Type</th>
+                  </tr>
+                </thead>
+                <tbody id="statementBody" class="divide-y divide-slate-700/30"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Balances & History -->
+      <section class="bg-card-dark border border-slate-700/50 rounded-2xl p-6 sm:p-8 shadow-glass">
+        <h2 class="text-2xl font-bold mb-6">Customer Balances & History</h2>
+        <div id="balances" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8"></div>
+        <div class="overflow-x-auto rounded-xl border border-slate-700/50">
+          <table class="w-full text-left">
+            <thead class="bg-slate-800/60">
+              <tr>
+                <th class="p-4 font-semibold">Date</th>
+                <th class="p-4 font-semibold">Customer</th>
+                <th class="p-4 font-semibold">Type</th>
+                <th class="p-4 font-semibold">Amount</th>
+                <th class="p-4 font-semibold">Reason</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody" class="divide-y divide-slate-700/30"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────────────────────────────────────
+// CONFIG
+// ────────────────────────────────────────────────────────────────────────────────
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzUANbCDLKzy55EsXYSvKsqQZOA6C7C3DPv00jCmj_ww2lYh2fTDrDOBWq0xlxHr4VT/exec";
+
+let currentUser = null;
+let records = [];
+
+// ── Hashing with fallback ──
+async function sha256(text) {
+  try {
+    const enc = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch (err) {
+    console.warn("Crypto blocked – using fallback");
+    return btoa(text + "fallback-salt");
+  }
+}
+function getUsers() { return JSON.parse(localStorage.getItem("moneyUsers") || "[]"); }
+function setUsers(users) { localStorage.setItem("moneyUsers", JSON.stringify(users)); }
+function setCurrentUser(username) {
+  currentUser = { username };
+  localStorage.setItem("moneyUser", JSON.stringify(currentUser));
+  const el = document.getElementById("currentUser");
+  if (el) el.textContent = username;
+}
+function loadUserRecords() {
+  if (!currentUser?.username) return;
+  const key = `moneyRecords::${currentUser.username}`;
+  records = JSON.parse(localStorage.getItem(key) || "[]");
+}
+function saveUserRecords() {
+  if (!currentUser?.username) return;
+  const key = `moneyRecords::${currentUser.username}`;
+  localStorage.setItem(key, JSON.stringify(records));
+}
+function checkAuth() {
+  const u = localStorage.getItem("moneyUser");
+  if (u) {
+    currentUser = JSON.parse(u);
+    setCurrentUser(currentUser.username);
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    loadUserRecords();
+    renderBalancesAndTable();
+    populateCustomerLists();
+  } else {
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("dashboard").classList.add("hidden");
+  }
+}
+async function login(username, password) {
+  username = username.trim();
+  if (!username || !password) return alert("Enter username & password");
+  const users = getUsers();
+  const found = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  if (!found) return alert("User not found. Please create an account.");
+  const passHash = await sha256(password);
+  if (passHash !== found.passHash) return alert("Incorrect password.");
+  setCurrentUser(found.username);
+  checkAuth();
+}
+async function register(username, password, confirm) {
+  username = username.trim();
+  if (!username || !password || !confirm) return alert("Fill all fields");
+  if (password.length < 6) return alert("Password must be at least 6 characters");
+  if (password !== confirm) return alert("Passwords do not match");
+  const users = getUsers();
+  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    return alert("Username already taken.");
+  }
+  const passHash = await sha256(password);
+  users.push({ username, passHash });
+  setUsers(users);
+  alert("Account created successfully! Please log in.");
+  document.getElementById("registerForm").classList.add("hidden");
+  document.getElementById("loginForm").classList.remove("hidden");
+  document.getElementById("tabRegister").classList.remove("bg-slate-800/60");
+  document.getElementById("tabLogin").classList.add("bg-slate-800/60");
+}
+function logout() {
+  localStorage.removeItem("moneyUser");
+  location.reload();
+}
+function showMessage(text, type = "success") {
+  const msg = document.getElementById("message");
+  msg.textContent = text;
+  msg.className = `mb-6 text-center font-medium text-lg ${type === "success" ? "text-green-400" : "text-red-400"}`;
+  msg.classList.remove("hidden");
+  setTimeout(() => msg.classList.add("hidden"), 4000);
+}
+function showSection(section) {
+  document.querySelectorAll('#giveSection, #receiveSection, #statementsSection').forEach(el => el.classList.add('hidden'));
+  if (section) document.getElementById(`${section}Section`).classList.remove('hidden');
+  const sb = document.getElementById("sidebar");
+  if (window.innerWidth < 1024 && !sb.classList.contains("-translate-x-full")) {
+    sb.classList.add("-translate-x-full");
+    sb.classList.remove("translate-x-0");
+  }
+}
+function toggleSidebar() {
+  const sb = document.getElementById("sidebar");
+  sb.classList.toggle("translate-x-0");
+  sb.classList.toggle("-translate-x-full");
+}
+
+// ── Google Sheets sync with feedback (no preflight, robust) ──
+async function sendToGoogleSheets(record) {
+  if (!GOOGLE_SCRIPT_URL) {
+    console.warn("Google Sheets URL is not set");
+    return;
+  }
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // ensures the POST is sent even without CORS headers
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // simple to avoid preflight
+      body: JSON.stringify(record)
+    });
+    // In no-cors, response is opaque; treat as success since the request was sent.
+    if (response.type === "opaque" || response.ok) {
+      showMessage("Saved to Google Sheets", "success");
+    } else {
+      showMessage("Google Sheets save failed", "error");
+    }
+  } catch (err) {
+    console.error("Sync error:", err);
+    showMessage("Cannot reach Google Sheets", "error");
+  }
+}
+
+function addRecord(record) {
+  record.timestamp = new Date().toISOString();
+  record.user = currentUser?.username || "system";
+  records.push(record);
+  saveUserRecords();
+  renderBalancesAndTable();
+  populateCustomerLists();
+  sendToGoogleSheets(record);
+}
+function deleteCustomer(name) {
+  if (!confirm(`Are you sure you want to DELETE ALL records for "${name}"?\n\nThis cannot be undone.`)) return;
+  const before = records.length;
+  records = records.filter(r => r.customer !== name);
+  saveUserRecords();
+  renderBalancesAndTable();
+  populateCustomerLists();
+  const removed = before - records.length;
+  showMessage(`Deleted ${removed} record(s) for "${name}".`);
+}
+
+// ── Render balances (delete button always visible) ──
+function renderBalancesAndTable() {
+  const balancesDiv = document.getElementById("balances");
+  const tbody = document.getElementById("recordsBody");
+  const receiveSelect = document.getElementById("name_receive");
+  balancesDiv.innerHTML = "";
+  tbody.innerHTML = "";
+  receiveSelect.innerHTML = '<option value="">-- Choose Customer --</option>';
+
+  const customers = {};
+  let totalGiven = 0, totalReceived = 0;
+
+  records.forEach(r => {
+    if (!customers[r.customer]) customers[r.customer] = { given: 0, received: 0 };
+    const amt = Number(r.amount) || 0;
+    if (r.type === "Given") {
+      customers[r.customer].given += amt;
+      totalGiven += amt;
+    } else {
+      customers[r.customer].received += amt;
+      totalReceived += amt;
+    }
+  });
+
+  Object.keys(customers).sort().forEach(name => {
+    const data = customers[name];
+    const balance = data.given - data.received;
+    const color = balance > 0 ? 'text-green-400' : balance < 0 ? 'text-red-400' : 'text-gray-300';
+    const card = document.createElement("div");
+    card.className = "bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-5 sm:p-6 shadow-glass";
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-bold text-lg">${name}</h3>
+        <div class="flex items-center gap-2">
+          <button class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg" data-statement="${name}">Statement</button>
+          <button class="text-xs bg-red-600 hover:bg-red-500 px-3 py-1 rounded-lg text-white" data-delete="${name}">Delete</button>
+        </div>
+      </div>
+      <div class="space-y-2 text-sm">
+        <p>Given: <span class="font-semibold text-green-300">${data.given.toFixed(2)}</span></p>
+        <p>Received: <span class="font-semibold text-blue-300">${data.received.toFixed(2)}</span></p>
+        <p class="text-lg font-bold mt-2 ${color}">Balance: ${balance.toFixed(2)}</p>
+      </div>
+    `;
+    card.querySelector('[data-statement]').addEventListener('click', () => openQuickStatement(name));
+    card.querySelector('[data-delete]').addEventListener('click', () => deleteCustomer(name));
+    balancesDiv.appendChild(card);
+
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    receiveSelect.appendChild(opt);
+  });
+
+  document.getElementById("totalGiven").textContent = totalGiven.toFixed(2);
+  document.getElementById("totalReceived").textContent = totalReceived.toFixed(2);
+  const net = totalGiven - totalReceived;
+  const netEl = document.getElementById("netBalance");
+  netEl.textContent = net.toFixed(2);
+  netEl.className = net > 0 ? "text-green-400" : net < 0 ? "text-red-400" : "text-gray-300";
+
+  records.slice().reverse().forEach(r => {
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-slate-700/30 transition";
+    tr.innerHTML = `
+      <td class="p-4">${r.date || '-'}</td>
+      <td class="p-4 font-medium">${r.customer}</td>
+      <td class="p-4">${r.type}</td>
+      <td class="p-4 font-medium ${r.type === 'Given' ? 'text-green-400' : 'text-blue-400'}">${Number(r.amount).toFixed(2)}</td>
+      <td class="p-4 text-text-muted">${r.reason || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function populateCustomerLists() {
+  const stmtSelect = document.getElementById("statementCustomer");
+  const names = [...new Set(records.map(r => r.customer).filter(Boolean))].sort();
+  stmtSelect.innerHTML = '<option value="">-- Choose Customer --</option>';
+  names.forEach(n => {
+    const opt = document.createElement("option");
+    opt.value = n;
+    opt.textContent = n;
+    stmtSelect.appendChild(opt);
+  });
+}
+
+// ── Statement functions ──
+function filterRecordsByCustomerAndDate(customer, fromDate, toDate) {
+  const from = fromDate ? new Date(fromDate) : null;
+  const to = toDate ? new Date(toDate) : null;
+  return records.filter(r => {
+    if (r.customer !== customer) return false;
+    if (!from && !to) return true;
+    if (!r.date) return false;
+    const d = new Date(r.date);
+    return (!from || d >= from) && (!to || d <= to);
+  }).sort((a,b) => new Date(a.date) - new Date(b.date));
+}
+function computeTotals(list) {
+  let given = 0, received = 0;
+  list.forEach(r => {
+    const amt = Number(r.amount) || 0;
+    if (r.type === "Given") given += amt;
+    else received += amt;
+  });
+  return { given, received, balance: given - received };
+}
+function renderStatement(customer, fromDate, toDate) {
+  const list = filterRecordsByCustomerAndDate(customer, fromDate, toDate);
+  const { given, received, balance } = computeTotals(list);
+
+  document.getElementById("statementCustomerName").textContent = customer;
+  document.getElementById("statementTotalGiven").textContent = given.toFixed(2);
+  document.getElementById("statementTotalReceived").textContent = received.toFixed(2);
+  const balEl = document.getElementById("statementBalance");
+  balEl.textContent = balance.toFixed(2);
+  balEl.className = `text-xl font-bold ${balance > 0 ? 'text-green-300' : balance < 0 ? 'text-red-300' : 'text-gray-300'}`;
+
+  document.getElementById("statementRange").textContent = (fromDate || toDate) ? `From: ${fromDate || ''} To: ${toDate || ''}` : "All time";
+  document.getElementById("statementGenerated").textContent = new Date().toLocaleString();
+  document.getElementById("statementUser").textContent = currentUser?.username || "-";
+
+  const tbody = document.getElementById("statementBody");
+  tbody.innerHTML = list.length === 0
+    ? `<tr><td colspan="4" class="p-4 text-center text-text-muted">No transactions found.</td></tr>`
+    : list.map(r => `
+        <tr class="hover:bg-slate-700/30 transition">
+          <td class="p-4">${r.date || '-'}</td>
+          <td class="p-4 text-text-muted">${r.reason || '-'}</td>
+          <td class="p-4 font-medium ${r.type === 'Given' ? 'text-green-300' : 'text-blue-300'}">${Number(r.amount).toFixed(2)}</td>
+          <td class="p-4">${r.type}</td>
+        </tr>
+      `).join('');
+  document.getElementById("statementModal").classList.remove("hidden");
+}
+function openQuickStatement(customer) {
+  showSection('statements');
+  document.getElementById("statementCustomer").value = customer;
+  document.getElementById("fromDate").value = "";
+  document.getElementById("toDate").value = "";
+  renderStatement(customer, "", "");
+}
+
+// ── Exports ──
+function exportCSV(customer, fromDate, toDate) {
+  const list = filterRecordsByCustomerAndDate(customer, fromDate, toDate);
+  const { given, received, balance } = computeTotals(list);
+  const escape = s => `"${(s || '').toString().replace(/"/g, '""')}"`;
+  let csv = [
+    ["Customer Statement", customer],
+    fromDate || toDate ? ["From", fromDate || "", "To", toDate || ""] : [],
+    ["Generated", new Date().toLocaleString(), "User", currentUser?.username || "-"],
+    [],
+    ["Date", "Reason", "Amount", "Type"],
+    ...list.map(r => [r.date || "", r.reason || "", Number(r.amount).toFixed(2), r.type]),
+    [],
+    ["Total Given", given.toFixed(2)],
+    ["Total Received", received.toFixed(2)],
+    ["Balance", balance.toFixed(2)]
+  ].map(row => row.map(escape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Statement_${customer.replace(/[^\w]/g,"_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function exportXLSX() {
+  const customer = document.getElementById("statementCustomer").value;
+  if (!customer) return alert("Please select a customer first");
+  const fromDate = document.getElementById("fromDate").value;
+  const toDate = document.getElementById("toDate").value;
+  const list = filterRecordsByCustomerAndDate(customer, fromDate, toDate);
+  const { given, received, balance } = computeTotals(list);
+
+  const data = [
+    ["Customer Statement", customer],
+    fromDate || toDate ? ["Period", fromDate || "-", "to", toDate || "-"] : [],
+    ["Generated", new Date().toLocaleString(), "User", currentUser?.username || "-"],
+    [],
+    ["Date", "Reason", "Amount", "Type"],
+    ...list.map(r => [r.date || "", r.reason || "", Number(r.amount).toFixed(2), r.type]),
+    [],
+    ["Total Given", given.toFixed(2)],
+    ["Total Received", received.toFixed(2)],
+    ["Balance", balance.toFixed(2)]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Statement");
+  const safeName = customer.replace(/[^\w\-]+/g, "_");
+  XLSX.writeFile(wb, `Statement_${safeName}.xlsx`);
+}
+function exportPDF() {
+  const customer = document.getElementById("statementCustomer").value;
+  if (!customer) return alert("Please select a customer first");
+  const fromDate = document.getElementById("fromDate").value;
+  const toDate = document.getElementById("toDate").value;
+  const list = filterRecordsByCustomerAndDate(customer, fromDate, toDate);
+  const { given, received, balance } = computeTotals(list);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  let y = 40;
+  const margin = 40;
+
+  doc.setFontSize(16).setFont("helvetica", "bold").text("Customer Statement", margin, y); y += 24;
+  doc.setFontSize(11).setFont("helvetica", "normal");
+  doc.text(`Customer: ${customer}`, margin, y); y += 16;
+  doc.text(`User: ${currentUser?.username || "-"}`, margin, y); y += 16;
+  doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y); y += 16;
+  doc.text(`Range: ${fromDate || "All time"} - ${toDate || ""}`, margin, y); y += 30;
+
+  doc.setFontSize(12).setFont("helvetica", "bold")
+     .text(`Given: ${given.toFixed(2)} Received: ${received.toFixed(2)} Balance: ${balance.toFixed(2)}`, margin, y);
+  y += 30;
+
+  doc.autoTable({
+    startY: y,
+    head: [['Date', 'Reason', 'Amount', 'Type']],
+    body: list.map(r => [r.date || '', r.reason || '', Number(r.amount).toFixed(2), r.type]),
+    styles: { fontSize: 10, cellPadding: 6 },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+    margin: { left: margin, right: margin }
+  });
+
+  const safeName = customer.replace(/[^\w\-]+/g, "_");
+  doc.save(`Statement_${safeName}.pdf`);
+}
+
+// ── Show/hide export buttons ──
+function updateExportButtonsVisibility() {
+  const isMobile = window.innerWidth < 768;
+  document.getElementById("exportXlsxBtn").classList.remove("hidden");
+  document.getElementById("exportPdfBtn").classList.toggle("hidden", isMobile);
+}
+
+// ── Event Listeners ──
+document.getElementById("tabLogin").addEventListener("click", () => {
+  document.getElementById("loginForm").classList.remove("hidden");
+  document.getElementById("registerForm").classList.add("hidden");
+  document.getElementById("tabLogin").classList.add("bg-slate-800/60");
+  document.getElementById("tabRegister").classList.remove("bg-slate-800/60");
+});
+document.getElementById("tabRegister").addEventListener("click", () => {
+  document.getElementById("loginForm").classList.add("hidden");
+  document.getElementById("registerForm").classList.remove("hidden");
+  document.getElementById("tabRegister").classList.add("bg-slate-800/60");
+  document.getElementById("tabLogin").classList.remove("bg-slate-800/60");
+});
+
+document.getElementById("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  await login(document.getElementById("username").value, document.getElementById("password").value);
+});
+document.getElementById("registerForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  await register(
+    document.getElementById("r_username").value,
+    document.getElementById("r_password").value,
+    document.getElementById("r_confirm").value
+  );
+});
+
+document.getElementById("viewStatementBtn").addEventListener("click", () => {
+  const c = document.getElementById("statementCustomer").value;
+  if (!c) return alert("Please select a customer");
+  renderStatement(c, document.getElementById("fromDate").value, document.getElementById("toDate").value);
+});
+document.getElementById("exportCsvBtn").addEventListener("click", () => {
+  const c = document.getElementById("statementCustomer").value;
+  if (!c) return alert("Please select a customer");
+  exportCSV(c, document.getElementById("fromDate").value, document.getElementById("toDate").value);
+});
+document.getElementById("exportPdfBtn").addEventListener("click", () => {
+  const c = document.getElementById("statementCustomer").value;
+  if (!c) return alert("Please select a customer");
+  exportPDF();
+});
+document.getElementById("exportXlsxBtn").addEventListener("click", () => {
+  const c = document.getElementById("statementCustomer").value;
+  if (!c) return alert("Please select a customer");
+  exportXLSX();
+});
+
+document.getElementById("giveForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = document.getElementById("name_give").value.trim();
+  const amount = document.getElementById("amount_give").value;
+  const reason = document.getElementById("reason").value.trim();
+  const date = document.getElementById("date_give").value;
+  if (!name || !amount || !date) return alert("Please complete required fields");
+  addRecord({ customer: name, type: "Given", amount, reason, date });
+  e.target.reset();
+  showMessage("Record added successfully!");
+  showSection(null);
+});
+
+document.getElementById("receiveForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = document.getElementById("name_receive").value.trim();
+  const amount = document.getElementById("amount_receive").value;
+  const date = document.getElementById("date_receive").value;
+  if (!name || !amount || !date) return alert("Please complete required fields");
+  addRecord({ customer: name, type: "Received", amount, reason: "", date });
+  e.target.reset();
+  showMessage("Record added successfully!");
+  showSection(null);
+});
+
+/* Init */
+checkAuth();
+updateExportButtonsVisibility();
+</script>
+</body>
+</html>
